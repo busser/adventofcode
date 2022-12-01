@@ -39,7 +39,7 @@ type Generator struct {
 
 // NewGenerator builds a generator for the given date and author. If overwrite
 // is true, the generator will overwrite existing files.
-func NewGenerator(day, year int, author, workdir, cookie string, overwrite bool) (*Generator, error) {
+func NewGenerator(day, year int, workdir, cookie string, overwrite bool) (*Generator, error) {
 	gen := &Generator{
 		day:       day,
 		year:      year,

@@ -37,7 +37,6 @@ your configuration file.`,
 		gen, err := scaffolding.NewGenerator(
 			viper.GetInt("day"),
 			viper.GetInt("year"),
-			viper.GetString("author"),
 			viper.GetString("workdir"),
 			viper.GetString("cookie"),
 			viper.GetBool("force"),
@@ -68,7 +67,6 @@ func init() {
 	}
 	scaffoldCmd.Flags().IntP("year", "y", year, "The year of Advent of Code you are working on")
 
-	scaffoldCmd.Flags().StringP("author", "a", "", "Your name, username, or nickname (eg. arthurb)")
 	scaffoldCmd.Flags().StringP("workdir", "w", "", "Your Advent of Code working directory")
 	scaffoldCmd.Flags().StringP("cookie", "c", "", "Your session cookie for adventofcode.com")
 	scaffoldCmd.Flags().BoolP("force", "f", false, "If true, overwrite existing files")
