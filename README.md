@@ -25,6 +25,12 @@ git clone git@github.com:busser/adventofcode.git
 cd adventofcode
 ```
 
+Remove existing solutions to start from scratch:
+
+```bash
+rm -r y*
+```
+
 Build the `adventofcode` command-line tool:
 
 ```bash
