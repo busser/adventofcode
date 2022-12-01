@@ -1,0 +1,42 @@
+package d{{ .Day }}
+
+import (
+	"fmt"
+	"io"
+
+	"github.com/busser/adventofcode/helpers"
+)
+
+// PartOne solves the first problem of day {{ .Day }} of Advent of Code {{ .Year }}.
+func PartOne(r io.Reader, w io.Writer) error {
+	// TODO: Read the input. For example:
+	lines, err := helpers.LinesFromReader(r)
+	if err != nil {
+		return fmt.Errorf("could not read input: %w", err)
+	}
+
+	// TODO: Write the answer. For example:
+	_, err = fmt.Fprintf(w, "%d", len(lines))
+	if err != nil {
+		return fmt.Errorf("could not write answer: %w", err)
+	}
+
+	return nil
+}
+
+// PartTwo solves the second problem of day {{ .Day }} of Advent of Code {{ .Year }}.
+func PartTwo(r io.Reader, w io.Writer) error {
+	// TODO: Read the input. For example:
+	lines, err := helpers.LinesFromReader(r)
+	if err != nil {
+		return fmt.Errorf("could not read input: %w", err)
+	}
+
+	// TODO: Write the answer. For example:
+	_, err = fmt.Fprintf(w, "%d", len(lines))
+	if err != nil {
+		return fmt.Errorf("could not write answer: %w", err)
+	}
+
+	return nil
+}
