@@ -44,7 +44,7 @@ should be:
    it:
 
    ```bash
-   go test ./y2021/d01/yournamehere -run ExamplePartOne
+   go test ./y2021/d01 -run ExamplePartOne
    ```
 
 2. Once you think you have found the answer to the problem, submit it on the
