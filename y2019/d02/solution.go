@@ -56,7 +56,7 @@ func runGravityAssist(program []int, noun, verb int) (int, error) {
 	program[1] = noun
 	program[2] = verb
 
-	if err := intcode.Run(program); err != nil {
+	if _, err := intcode.Run(program, nil); err != nil {
 		return 0, err
 	}
 

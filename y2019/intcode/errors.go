@@ -2,18 +2,19 @@ package intcode
 
 import "fmt"
 
-type unknownInstructionError struct {
-	i *interpreter
+type unknownOpcodeError struct {
+	s      *state
+	opcode int
 }
 
-func (err *unknownInstructionError) Error() string {
-	return fmt.Sprintf("unknown instruction %d at position %d", err.i.readAbsolute(err.i.pointer), err.i.pointer)
+func (err *unknownOpcodeError) Error() string {
+	return fmt.Sprintf("unknown opcode %d at position %d", err.s.read(err.s.pointer), err.s.pointer)
 }
 
 type outOfBoundsError struct {
-	i *interpreter
+	s *state
 }
 
 func (err *outOfBoundsError) Error() string {
-	return fmt.Sprintf("position %d is out of bounds", err.i.pointer)
+	return fmt.Sprintf("position %d is out of bounds", err.s.pointer)
 }
