@@ -57,13 +57,14 @@ func findMarker(datastream []byte, size int) (int, error) {
 }
 
 func hasDuplicates(block []byte) bool {
-	var seen [256]bool
+	var bits [16]uint16
 
 	for _, b := range block {
-		if seen[b] {
+		i, mask := b/16, uint16(1<<(b%16))
+		if bits[i]&mask != 0 {
 			return true
 		}
-		seen[b] = true
+		bits[i] |= mask
 	}
 
 	return false
