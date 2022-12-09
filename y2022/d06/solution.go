@@ -8,7 +8,7 @@ import (
 
 // PartOne solves the first problem of day 6 of Advent of Code 2022.
 func PartOne(r io.Reader, w io.Writer) error {
-	datastream, err := datastreamFromReader(r)
+	datastream, err := io.ReadAll(r)
 	if err != nil {
 		return fmt.Errorf("could not read input: %w", err)
 	}
@@ -28,7 +28,7 @@ func PartOne(r io.Reader, w io.Writer) error {
 
 // PartTwo solves the second problem of day 6 of Advent of Code 2022.
 func PartTwo(r io.Reader, w io.Writer) error {
-	datastream, err := datastreamFromReader(r)
+	datastream, err := io.ReadAll(r)
 	if err != nil {
 		return fmt.Errorf("could not read input: %w", err)
 	}
@@ -68,17 +68,4 @@ func hasDuplicates(block []byte) bool {
 	}
 
 	return false
-}
-
-func datastreamFromReader(r io.Reader) ([]byte, error) {
-	datastream, err := io.ReadAll(r)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(datastream) < 4 {
-		return nil, fmt.Errorf("datastream too short, only %d bytes", len(datastream))
-	}
-
-	return datastream, nil
 }
