@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/busser/adventofcode/helpers"
-	"github.com/busser/adventofcode/y2022/d11/queue"
 )
 
 // PartOne solves the first problem of day 11 of Advent of Code 2022.
@@ -47,8 +46,7 @@ func PartTwo(r io.Reader, w io.Writer) error {
 }
 
 type monkey struct {
-	startingItems  []int
-	items          *queue.Queue[int]
+	items          []int
 	operation      func(int) int
 	divisor        int
 	throwToIfTrue  int
@@ -61,29 +59,13 @@ func monkeyBusiness(monkeys []monkey, rounds int, relief bool) int {
 		productOfDivisors *= monkeys[i].divisor
 	}
 
-	// In order to improve memory usage, we queue the items through a ring
-	// buffer. This buffer needs enough capacity to store all items at once, if
-	// need be.
-	totalItems := 0
-	for i := range monkeys {
-		totalItems += len(monkeys[i].startingItems)
-	}
-	for i := range monkeys {
-		monkeys[i].items = queue.New[int](totalItems)
-		for _, item := range monkeys[i].startingItems {
-			monkeys[i].items.Enqueue(item)
-		}
-	}
-
 	business := make([]int, len(monkeys))
 
 	for r := 0; r < rounds; r++ {
 		for i := range monkeys {
-			business[i] += monkeys[i].items.Len()
+			business[i] += len(monkeys[i].items)
 
-			for monkeys[i].items.Len() > 0 {
-				item := monkeys[i].items.Dequeue()
-
+			for _, item := range monkeys[i].items {
 				item = monkeys[i].operation(item)
 				if relief {
 					item /= 3
@@ -99,8 +81,12 @@ func monkeyBusiness(monkeys []monkey, rounds int, relief bool) int {
 					next = monkeys[i].throwToIfTrue
 				}
 
-				monkeys[next].items.Enqueue(item)
+				monkeys[next].items = append(monkeys[next].items, item)
 			}
+
+			// We empty the slice but keep the backing array for future use.
+			// This reduces overall memory usage.
+			monkeys[i].items = monkeys[i].items[:0]
 		}
 	}
 
@@ -132,10 +118,10 @@ func monkeysFromReader(r io.Reader) ([]monkey, error) {
 			return nil, err
 		}
 
-		if m.throwToIfFalse < 0 || m.throwToIfFalse >= numMonkeys {
+		if m.throwToIfFalse < 0 || m.throwToIfFalse >= numMonkeys || m.throwToIfFalse == len(monkeys) {
 			return nil, fmt.Errorf("cannot throw to monkey %d", m.throwToIfFalse)
 		}
-		if m.throwToIfTrue < 0 || m.throwToIfTrue >= numMonkeys {
+		if m.throwToIfTrue < 0 || m.throwToIfTrue >= numMonkeys || m.throwToIfTrue == len(monkeys) {
 			return nil, fmt.Errorf("cannot throw to monkey %d", m.throwToIfTrue)
 		}
 
@@ -172,7 +158,7 @@ func monkeyFromLines(lines []string) (monkey, error) {
 	}
 
 	return monkey{
-		startingItems:  items,
+		items:          items,
 		operation:      operation,
 		divisor:        divisor,
 		throwToIfTrue:  throwToIfTrue,
