@@ -14,16 +14,7 @@ func PartOne(r io.Reader, w io.Writer) error {
 		return fmt.Errorf("could not read input: %w", err)
 	}
 
-	distance, err := shortestPath(
-		hm.topography,
-		hm.start,
-		func(pos position) bool {
-			return pos == hm.end
-		},
-		func(from, to position) bool {
-			return hm.topography[to.row][to.col] <= hm.topography[from.row][from.col]+1
-		},
-	)
+	distance, err := shortestPath(hm.topography, []position{hm.start}, hm.end)
 	if err != nil {
 		return err
 	}
@@ -43,16 +34,16 @@ func PartTwo(r io.Reader, w io.Writer) error {
 		return fmt.Errorf("could not read input: %w", err)
 	}
 
-	distance, err := shortestPath(
-		hm.topography,
-		hm.end,
-		func(pos position) bool {
-			return hm.topography[pos.row][pos.col] == 'a'
-		},
-		func(from, to position) bool {
-			return hm.topography[to.row][to.col] >= hm.topography[from.row][from.col]-1
-		},
-	)
+	var starts []position
+	for row := range hm.topography {
+		for col := range hm.topography[row] {
+			if hm.topography[row][col] == 'a' {
+				starts = append(starts, position{row, col})
+			}
+		}
+	}
+
+	distance, err := shortestPath(hm.topography, starts, hm.end)
 	if err != nil {
 		return err
 	}
@@ -74,20 +65,18 @@ type position struct {
 	row, col int
 }
 
-func shortestPath(
-	topography [][]byte,
-	from position,
-	isTarget func(position) bool,
-	isReachable func(from, to position) bool,
-) (int, error) {
+func shortestPath(topography [][]byte, from []position, to position) (int, error) {
 	visited := make([][]bool, len(topography))
 	for row := range visited {
 		visited[row] = make([]bool, len(topography[row]))
 	}
-	visited[from.row][from.col] = true
 
-	var toVisit, next []position
-	next = append(next, from)
+	var next []position
+	toVisit := from
+
+	for _, pos := range from {
+		visited[pos.row][pos.col] = true
+	}
 
 	visit := func(from, to position) {
 		if !isWithinBounds(topography, to) {
@@ -98,7 +87,7 @@ func shortestPath(
 			return
 		}
 
-		if !isReachable(from, to) {
+		if topography[to.row][to.col] > topography[from.row][from.col]+1 {
 			return
 		}
 
@@ -107,15 +96,8 @@ func shortestPath(
 	}
 
 	for distance := 0; ; distance++ {
-		toVisit, next = next, toVisit
-		next = next[:0]
-
-		if len(toVisit) == 0 {
-			return 0, errors.New("no path")
-		}
-
 		for _, pos := range toVisit {
-			if isTarget(pos) {
+			if pos == to {
 				return distance, nil
 			}
 
@@ -124,6 +106,13 @@ func shortestPath(
 			visit(pos, position{pos.row, pos.col - 1})
 			visit(pos, position{pos.row, pos.col + 1})
 		}
+
+		if len(next) == 0 {
+			return 0, errors.New("no path")
+		}
+
+		toVisit, next = next, toVisit
+		next = next[:0]
 	}
 }
 
