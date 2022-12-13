@@ -16,14 +16,9 @@ func PartOne(r io.Reader, w io.Writer) error {
 		return fmt.Errorf("could not read input: %w", err)
 	}
 
-	sum := 0
-	for i, p := range pairs {
-		if diff(p.left, p.right) < 0 {
-			sum += i + 1
-		}
-	}
+	indexSum := inOrderPairs(pairs)
 
-	_, err = fmt.Fprintf(w, "%d", sum)
+	_, err = fmt.Fprintf(w, "%d", indexSum)
 	if err != nil {
 		return fmt.Errorf("could not write answer: %w", err)
 	}
@@ -38,6 +33,39 @@ func PartTwo(r io.Reader, w io.Writer) error {
 		return fmt.Errorf("could not read input: %w", err)
 	}
 
+	key := decoderKey(pairs)
+
+	_, err = fmt.Fprintf(w, "%d", key)
+	if err != nil {
+		return fmt.Errorf("could not write answer: %w", err)
+	}
+
+	return nil
+}
+
+type packet struct {
+	isList  bool
+	values  []packet
+	integer int
+}
+
+type pair[T any] struct {
+	left, right T
+}
+
+func inOrderPairs(pairs []pair[packet]) int {
+	indexSum := 0
+
+	for i, p := range pairs {
+		if diff(p.left, p.right) < 0 {
+			indexSum += i + 1
+		}
+	}
+
+	return indexSum
+}
+
+func decoderKey(pairs []pair[packet]) int {
 	firstDivider := must(packetValueFromString("[[2]]"))
 	secondDivider := must(packetValueFromString("[[6]]"))
 
@@ -58,22 +86,7 @@ func PartTwo(r io.Reader, w io.Writer) error {
 		}
 	}
 
-	_, err = fmt.Fprintf(w, "%d", decoderKey)
-	if err != nil {
-		return fmt.Errorf("could not write answer: %w", err)
-	}
-
-	return nil
-}
-
-type packet struct {
-	isList  bool
-	values  []packet
-	integer int
-}
-
-type pair[T any] struct {
-	left, right T
+	return decoderKey
 }
 
 func diff(left, right packet) int {
