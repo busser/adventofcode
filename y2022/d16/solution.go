@@ -74,19 +74,6 @@ func PartTwo(r io.Reader, w io.Writer) error {
 
 //=== Memoised DFS =============================================================
 
-type stack[T any] []T
-
-func (s *stack[T]) push(v T) {
-	*s = append(*s, v)
-}
-
-func (s *stack[T]) pop() T {
-	n := len(*s) - 1
-	v := (*s)[n]
-	*s = (*s)[:n]
-	return v
-}
-
 func mostPressurePossible(valves []valve, startValve valve, timeAvailable, actors int) int {
 	knownResults := make(map[stateCacheKey]int)
 
