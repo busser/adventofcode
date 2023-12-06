@@ -111,9 +111,51 @@ func (a almanac) convert(seedRanges []interval) []interval {
 func (m almanacMap) convert(farmRanges []interval) []interval {
 	var converted []interval
 
-	// This algorithm takes advantage of the fact that we preprocessed the map
-	// ranges so that there are no gaps before, between, or after them. Each
-	// farm range is guaranteed to fit into one or more map ranges.
+	// This algorithm preprocesses the map  ranges so that there are no gaps
+	// before, between, or after them. Each farm range is guaranteed to fit into
+	// one or more map ranges. We also guarantee that the farm ranges are sorted
+	// and non-overlapping, so that we can process them in order without ever
+	// having to backtrack.
+
+	sort.Slice(m.ranges, func(i, j int) bool {
+		return m.ranges[i].match.less(m.ranges[j].match)
+	})
+
+	// We fill in the gaps between the ranges with dummy ranges with a shift
+	// value of zero. This allows us to implement a simpler algorithm that
+	// handles the default case where a source number should be mapped to the
+	// same destination number.
+	//
+	// NOTE: the ranges in the input data don't have gaps between them but we'll
+	// assume that they might since this property isn't mentioned in the problem
+	// statement.
+
+	var mapRanges []almanacRange
+
+	start := math.MinInt
+
+	for i := range m.ranges {
+		if m.ranges[i].match.start > start {
+			mapRanges = append(mapRanges, almanacRange{
+				match: interval{
+					start: start,
+					end:   m.ranges[i].match.start,
+				},
+				shift: 0,
+			})
+		}
+
+		mapRanges = append(mapRanges, m.ranges[i])
+		start = m.ranges[i].match.end
+	}
+
+	mapRanges = append(mapRanges, almanacRange{
+		match: interval{
+			start: start,
+			end:   math.MaxInt,
+		},
+		shift: 0,
+	})
 
 	// We keep track of which farm range and map range we are at.
 	// We will move forward with either one of the indices at each step.
@@ -122,22 +164,22 @@ func (m almanacMap) convert(farmRanges []interval) []interval {
 	for fr < len(farmRanges) {
 		// The current farm range can't end before the current map range starts.
 		// This is one of the algorithm's invariants.
-		if farmRanges[fr].end <= m.ranges[mr].match.start {
+		if farmRanges[fr].end <= mapRanges[mr].match.start {
 			panic("current interval ends before current range starts")
 		}
 
 		// The current farm range can't start before the current map range.
 		// This is one of the algorithm's invariants.
-		if farmRanges[fr].start < m.ranges[mr].match.start {
+		if farmRanges[fr].start < mapRanges[mr].match.start {
 			panic("current interval starts before current range starts")
 		}
 
 		// If the farm range ends within the map range, we shift the entire farm
 		// range and move on the next farm range.
-		if farmRanges[fr].end <= m.ranges[mr].match.end {
+		if farmRanges[fr].end <= mapRanges[mr].match.end {
 			shifted := interval{
-				start: farmRanges[fr].start + m.ranges[mr].shift,
-				end:   farmRanges[fr].end + m.ranges[mr].shift,
+				start: farmRanges[fr].start + mapRanges[mr].shift,
+				end:   farmRanges[fr].end + mapRanges[mr].shift,
 			}
 			converted = append(converted, shifted)
 			fr++
@@ -147,7 +189,7 @@ func (m almanacMap) convert(farmRanges []interval) []interval {
 		// If the farm range begins after the current map range ends, we move on
 		// to the next map range. This can happen because of gaps between farm
 		// ranges.
-		if farmRanges[fr].start >= m.ranges[mr].match.end {
+		if farmRanges[fr].start >= mapRanges[mr].match.end {
 			mr++
 			continue
 		}
@@ -155,19 +197,19 @@ func (m almanacMap) convert(farmRanges []interval) []interval {
 		// If the farm range extends beyond the map range, we shift the part of
 		// the farm range that is within the map range and move on to the next
 		// map range with what remains of the farm range.
-		if farmRanges[fr].end > m.ranges[mr].match.end {
+		if farmRanges[fr].end > mapRanges[mr].match.end {
 			within := interval{
 				start: farmRanges[fr].start,
-				end:   m.ranges[mr].match.end,
+				end:   mapRanges[mr].match.end,
 			}
 			remainder := interval{
-				start: m.ranges[mr].match.end,
+				start: mapRanges[mr].match.end,
 				end:   farmRanges[fr].end,
 			}
 
 			shifted := interval{
-				start: within.start + m.ranges[mr].shift,
-				end:   within.end + m.ranges[mr].shift,
+				start: within.start + mapRanges[mr].shift,
+				end:   within.end + mapRanges[mr].shift,
 			}
 			converted = append(converted, shifted)
 
@@ -184,7 +226,7 @@ func (m almanacMap) convert(farmRanges []interval) []interval {
 	return merged
 }
 
-//=== Almanac: definition, parsing, and preprocessing ==========================
+//=== Almanac: definition and parsing ==========================================
 
 type almanac struct {
 	seeds []int
@@ -299,50 +341,10 @@ func almanacMapFromStrings(s []string) (almanacMap, error) {
 		})
 	}
 
-	sort.Slice(ranges, func(i, j int) bool {
-		return ranges[i].match.less(ranges[j].match)
-	})
-
-	// We fill in the gaps between the ranges with dummy ranges with a shift
-	// value of zero. This allows us to implement a simpler algorithm that
-	// handles the default case where a source number should be mapped to the
-	// same destination number.
-	//
-	// NOTE: the ranges in the input data don't have gaps between them but we'll
-	// assume that they might since this property isn't mentioned in the problem
-	// statement.
-
-	var fullRanges []almanacRange
-
-	start := math.MinInt
-
-	for i := range ranges {
-		if ranges[i].match.start > start {
-			fullRanges = append(fullRanges, almanacRange{
-				match: interval{
-					start: start,
-					end:   ranges[i].match.start,
-				},
-				shift: 0,
-			})
-		}
-
-		fullRanges = append(fullRanges, ranges[i])
-		start = ranges[i].match.end
-	}
-
-	fullRanges = append(fullRanges, almanacRange{
-		match: interval{
-			start: start,
-			end:   math.MaxInt,
-		},
-		shift: 0,
-	})
-
 	return almanacMap{
 		sourceCategory:      source,
 		destinationCatogory: destination,
-		ranges:              fullRanges,
+		ranges:              ranges,
 	}, nil
 }
 
