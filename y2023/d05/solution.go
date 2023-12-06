@@ -3,8 +3,8 @@ package d05
 import (
 	"fmt"
 	"io"
-	"log"
 	"math"
+	"sort"
 	"strings"
 
 	"github.com/busser/adventofcode/helpers"
@@ -17,16 +17,18 @@ func PartOne(r io.Reader, w io.Writer) error {
 		return fmt.Errorf("could not read input: %w", err)
 	}
 
-	lowestLocation := math.MaxInt
-
-	for _, seed := range almanac.seeds {
-		location := almanac.convert(seed)
-		if location < lowestLocation {
-			lowestLocation = location
+	intervals := make([]interval, len(almanac.seeds))
+	for i, seed := range almanac.seeds {
+		// using intervals of 1 to share code with PartTwo
+		intervals[i] = interval{
+			start: seed,
+			end:   seed + 1,
 		}
 	}
 
-	_, err = fmt.Fprintf(w, "%d", lowestLocation)
+	final := almanac.convert(intervals)
+
+	_, err = fmt.Fprintf(w, "%d", final[0].start)
 	if err != nil {
 		return fmt.Errorf("could not write answer: %w", err)
 	}
@@ -41,43 +43,57 @@ func PartTwo(r io.Reader, w io.Writer) error {
 		return fmt.Errorf("could not read input: %w", err)
 	}
 
-	numSeedRanges := len(almanac.seeds) / 2
-
-	lowestLocations := make(chan int, numSeedRanges)
-
-	for i := 0; i < numSeedRanges; i++ {
-		go func(i int) {
-			startSeed := almanac.seeds[i*2]
-			endSeed := startSeed + almanac.seeds[i*2+1]
-			log.Printf("worker %d: startSeed: %d, endSeed: %d", i, startSeed, endSeed)
-
-			lowestLocation := math.MaxInt
-			for seed := startSeed; seed < endSeed; seed++ {
-				location := almanac.convert(seed)
-				if location < lowestLocation {
-					lowestLocation = location
-				}
-			}
-
-			log.Printf("worker %d: lowestLocation: %d", i, lowestLocation)
-			lowestLocations <- lowestLocation
-		}(i)
-	}
-
-	lowestLocation := math.MaxInt
-	for i := 0; i < numSeedRanges; i++ {
-		location := <-lowestLocations
-		if location < lowestLocation {
-			lowestLocation = location
+	intervals := make([]interval, len(almanac.seeds)/2)
+	for i := range intervals {
+		start := almanac.seeds[2*i]
+		length := almanac.seeds[2*i+1]
+		intervals[i] = interval{
+			start: start,
+			end:   start + length,
 		}
 	}
 
-	_, err = fmt.Fprintf(w, "%d", lowestLocation)
+	final := almanac.convert(intervals)
+
+	_, err = fmt.Fprintf(w, "%d", final[0].start)
 	if err != nil {
 		return fmt.Errorf("could not write answer: %w", err)
 	}
 
 	return nil
+}
+
+type interval struct {
+	start int // inclusive
+	end   int // exclusive
+}
+
+func (i interval) less(j interval) bool {
+	if i.start == j.start {
+		return i.end < j.end
+	}
+	return i.start < j.start
+}
+
+func sortIntervals(intervals []interval) {
+	sort.Slice(intervals, func(i, j int) bool {
+		return intervals[i].less(intervals[j])
+	})
+}
+
+func mergeIntervals(intervals []interval) []interval {
+	sortIntervals(intervals)
+
+	var merged []interval
+	for _, i := range intervals {
+		if len(merged) == 0 || merged[len(merged)-1].end < i.start {
+			merged = append(merged, i)
+		} else if merged[len(merged)-1].end < i.end {
+			merged[len(merged)-1].end = i.end
+		}
+	}
+
+	return merged
 }
 
 var (
@@ -94,9 +110,8 @@ var (
 )
 
 type almanacRange struct {
-	destinationStart int
-	sourceStart      int
-	length           int
+	match interval
+	shift int
 }
 
 type almanacMap struct {
@@ -105,13 +120,78 @@ type almanacMap struct {
 	ranges              []almanacRange
 }
 
-func (m almanacMap) convert(n int) int {
-	for _, r := range m.ranges {
-		if n >= r.sourceStart && n < r.sourceStart+r.length {
-			return r.destinationStart + (n - r.sourceStart)
+func (m almanacMap) convert(intervals []interval) []interval {
+	var converted []interval
+
+	// This algorithm takes advantage of the fact that we preprocessed the map
+	// ranges so that there are no gaps before, between, or after them. Each
+	// interval is guaranteed to fit into one or more ranges.
+
+	// We keep track of which interval and range we are at.
+	// We will move forward with either one of the indices at each step.
+	i, r := 0, 0
+
+	for i < len(intervals) {
+		// The interval can't end before the current range starts. This is one
+		// of the algorithm's invariants.
+		if intervals[i].end <= m.ranges[r].match.start {
+			panic("current interval ends before current range starts")
 		}
+
+		// The interval can't start before the current range. This is one of the
+		// algorithm's invariants.
+		if intervals[i].start < m.ranges[r].match.start {
+			panic("current interval starts before current range starts")
+		}
+
+		// If the interval ends within the range, we map the entire interval
+		// based on the range's shift value, then move on to the next interval.
+		if intervals[i].end <= m.ranges[r].match.end {
+			shifted := interval{
+				start: intervals[i].start + m.ranges[r].shift,
+				end:   intervals[i].end + m.ranges[r].shift,
+			}
+			converted = append(converted, shifted)
+			i++
+			continue
+		}
+
+		// If the interval begins after the current range ends, we move on to
+		// the next range. This can happen because of gaps between intervals.
+		if intervals[i].start >= m.ranges[r].match.end {
+			r++
+			continue
+		}
+
+		// If the interval extends beyond the range, we shift the part that is
+		// within the range and move on to the next range with the remainder.
+		if intervals[i].end > m.ranges[r].match.end {
+			within := interval{
+				start: intervals[i].start,
+				end:   m.ranges[r].match.end,
+			}
+			remainder := interval{
+				start: m.ranges[r].match.end,
+				end:   intervals[i].end,
+			}
+
+			shifted := interval{
+				start: within.start + m.ranges[r].shift,
+				end:   within.end + m.ranges[r].shift,
+			}
+			converted = append(converted, shifted)
+
+			intervals[i] = remainder
+			r++
+			continue
+		}
+
+		panic("unhandled case")
 	}
-	return n
+
+	merged := mergeIntervals(converted)
+
+	return merged
 }
 
 type almanac struct {
@@ -119,11 +199,12 @@ type almanac struct {
 	maps  []almanacMap
 }
 
-func (a almanac) convert(n int) int {
+func (a almanac) convert(intervals []interval) []interval {
+	intervals = mergeIntervals(intervals)
 	for _, m := range a.maps {
-		n = m.convert(n)
+		intervals = m.convert(intervals)
 	}
-	return n
+	return intervals
 }
 
 func almanacFromReader(r io.Reader) (*almanac, error) {
@@ -196,17 +277,64 @@ func almanacMapFromStrings(s []string) (almanacMap, error) {
 		if len(nums) != 3 {
 			return almanacMap{}, fmt.Errorf("invalid input: expected 3 numbers, got %d", len(nums))
 		}
+
+		destinationStart := nums[0]
+		sourceStart := nums[1]
+		length := nums[2]
+
 		ranges = append(ranges, almanacRange{
-			destinationStart: nums[0],
-			sourceStart:      nums[1],
-			length:           nums[2],
+			match: interval{
+				start: sourceStart,
+				end:   sourceStart + length,
+			},
+			shift: destinationStart - sourceStart,
 		})
 	}
+
+	sort.Slice(ranges, func(i, j int) bool {
+		return ranges[i].match.less(ranges[j].match)
+	})
+
+	// We fill in the gaps between the ranges with dummy ranges with a shift
+	// value of zero. This allows us to implement a simpler algorithm that
+	// handles the default case where a source number should be mapped to the
+	// same destination number.
+	//
+	// NOTE: the ranges in the input data don't have gaps between them but we'll
+	// assume that they might since this property isn't mentioned in the problem
+	// statement.
+
+	var fullRanges []almanacRange
+
+	start := math.MinInt
+
+	for i := range ranges {
+		if ranges[i].match.start > start {
+			fullRanges = append(fullRanges, almanacRange{
+				match: interval{
+					start: start,
+					end:   ranges[i].match.start,
+				},
+				shift: 0,
+			})
+		}
+
+		fullRanges = append(fullRanges, ranges[i])
+		start = ranges[i].match.end
+	}
+
+	fullRanges = append(fullRanges, almanacRange{
+		match: interval{
+			start: start,
+			end:   math.MaxInt,
+		},
+		shift: 0,
+	})
 
 	return almanacMap{
 		sourceCategory:      source,
 		destinationCatogory: destination,
-		ranges:              ranges,
+		ranges:              fullRanges,
 	}, nil
 }
 
