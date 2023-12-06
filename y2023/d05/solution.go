@@ -17,16 +17,16 @@ func PartOne(r io.Reader, w io.Writer) error {
 		return fmt.Errorf("could not read input: %w", err)
 	}
 
-	intervals := make([]interval, len(almanac.seeds))
+	seedRanges := make([]interval, len(almanac.seeds))
 	for i, seed := range almanac.seeds {
 		// using intervals of 1 to share code with PartTwo
-		intervals[i] = interval{
+		seedRanges[i] = interval{
 			start: seed,
 			end:   seed + 1,
 		}
 	}
 
-	final := almanac.convert(intervals)
+	final := almanac.convert(seedRanges)
 
 	_, err = fmt.Fprintf(w, "%d", final[0].start)
 	if err != nil {
@@ -43,17 +43,17 @@ func PartTwo(r io.Reader, w io.Writer) error {
 		return fmt.Errorf("could not read input: %w", err)
 	}
 
-	intervals := make([]interval, len(almanac.seeds)/2)
-	for i := range intervals {
+	seedRanges := make([]interval, len(almanac.seeds)/2)
+	for i := range seedRanges {
 		start := almanac.seeds[2*i]
 		length := almanac.seeds[2*i+1]
-		intervals[i] = interval{
+		seedRanges[i] = interval{
 			start: start,
 			end:   start + length,
 		}
 	}
 
-	final := almanac.convert(intervals)
+	final := almanac.convert(seedRanges)
 
 	_, err = fmt.Fprintf(w, "%d", final[0].start)
 	if err != nil {
@@ -62,6 +62,8 @@ func PartTwo(r io.Reader, w io.Writer) error {
 
 	return nil
 }
+
+//=== Intervals: sorting and merging ===========================================
 
 type interval struct {
 	start int // inclusive
@@ -96,18 +98,98 @@ func mergeIntervals(intervals []interval) []interval {
 	return merged
 }
 
-var (
-	categories = [...]string{
-		"seed",
-		"soil",
-		"fertilizer",
-		"water",
-		"light",
-		"temperature",
-		"humidity",
-		"location",
+//=== Mapping ranges to new values =============================================
+
+func (a almanac) convert(seedRanges []interval) []interval {
+	farmRanges := mergeIntervals(seedRanges)
+	for _, m := range a.maps {
+		farmRanges = m.convert(farmRanges)
 	}
-)
+	return farmRanges
+}
+
+func (m almanacMap) convert(farmRanges []interval) []interval {
+	var converted []interval
+
+	// This algorithm takes advantage of the fact that we preprocessed the map
+	// ranges so that there are no gaps before, between, or after them. Each
+	// farm range is guaranteed to fit into one or more map ranges.
+
+	// We keep track of which farm range and map range we are at.
+	// We will move forward with either one of the indices at each step.
+	fr, mr := 0, 0
+
+	for fr < len(farmRanges) {
+		// The current farm range can't end before the current map range starts.
+		// This is one of the algorithm's invariants.
+		if farmRanges[fr].end <= m.ranges[mr].match.start {
+			panic("current interval ends before current range starts")
+		}
+
+		// The current farm range can't start before the current map range.
+		// This is one of the algorithm's invariants.
+		if farmRanges[fr].start < m.ranges[mr].match.start {
+			panic("current interval starts before current range starts")
+		}
+
+		// If the farm range ends within the map range, we shift the entire farm
+		// range and move on the next farm range.
+		if farmRanges[fr].end <= m.ranges[mr].match.end {
+			shifted := interval{
+				start: farmRanges[fr].start + m.ranges[mr].shift,
+				end:   farmRanges[fr].end + m.ranges[mr].shift,
+			}
+			converted = append(converted, shifted)
+			fr++
+			continue
+		}
+
+		// If the farm range begins after the current map range ends, we move on
+		// to the next map range. This can happen because of gaps between farm
+		// ranges.
+		if farmRanges[fr].start >= m.ranges[mr].match.end {
+			mr++
+			continue
+		}
+
+		// If the farm range extends beyond the map range, we shift the part of
+		// the farm range that is within the map range and move on to the next
+		// map range with what remains of the farm range.
+		if farmRanges[fr].end > m.ranges[mr].match.end {
+			within := interval{
+				start: farmRanges[fr].start,
+				end:   m.ranges[mr].match.end,
+			}
+			remainder := interval{
+				start: m.ranges[mr].match.end,
+				end:   farmRanges[fr].end,
+			}
+
+			shifted := interval{
+				start: within.start + m.ranges[mr].shift,
+				end:   within.end + m.ranges[mr].shift,
+			}
+			converted = append(converted, shifted)
+
+			farmRanges[fr] = remainder
+			mr++
+			continue
+		}
+
+		panic("unhandled case")
+	}
+
+	merged := mergeIntervals(converted)
+
+	return merged
+}
+
+//=== Almanac: definition, parsing, and preprocessing ==========================
+
+type almanac struct {
+	seeds []int
+	maps  []almanacMap
+}
 
 type almanacRange struct {
 	match interval
@@ -120,92 +202,18 @@ type almanacMap struct {
 	ranges              []almanacRange
 }
 
-func (m almanacMap) convert(intervals []interval) []interval {
-	var converted []interval
-
-	// This algorithm takes advantage of the fact that we preprocessed the map
-	// ranges so that there are no gaps before, between, or after them. Each
-	// interval is guaranteed to fit into one or more ranges.
-
-	// We keep track of which interval and range we are at.
-	// We will move forward with either one of the indices at each step.
-	i, r := 0, 0
-
-	for i < len(intervals) {
-		// The interval can't end before the current range starts. This is one
-		// of the algorithm's invariants.
-		if intervals[i].end <= m.ranges[r].match.start {
-			panic("current interval ends before current range starts")
-		}
-
-		// The interval can't start before the current range. This is one of the
-		// algorithm's invariants.
-		if intervals[i].start < m.ranges[r].match.start {
-			panic("current interval starts before current range starts")
-		}
-
-		// If the interval ends within the range, we map the entire interval
-		// based on the range's shift value, then move on to the next interval.
-		if intervals[i].end <= m.ranges[r].match.end {
-			shifted := interval{
-				start: intervals[i].start + m.ranges[r].shift,
-				end:   intervals[i].end + m.ranges[r].shift,
-			}
-			converted = append(converted, shifted)
-			i++
-			continue
-		}
-
-		// If the interval begins after the current range ends, we move on to
-		// the next range. This can happen because of gaps between intervals.
-		if intervals[i].start >= m.ranges[r].match.end {
-			r++
-			continue
-		}
-
-		// If the interval extends beyond the range, we shift the part that is
-		// within the range and move on to the next range with the remainder.
-		if intervals[i].end > m.ranges[r].match.end {
-			within := interval{
-				start: intervals[i].start,
-				end:   m.ranges[r].match.end,
-			}
-			remainder := interval{
-				start: m.ranges[r].match.end,
-				end:   intervals[i].end,
-			}
-
-			shifted := interval{
-				start: within.start + m.ranges[r].shift,
-				end:   within.end + m.ranges[r].shift,
-			}
-			converted = append(converted, shifted)
-
-			intervals[i] = remainder
-			r++
-			continue
-		}
-
-		panic("unhandled case")
+var (
+	categories = [...]string{
+		"seed",
+		"soil",
+		"fertilizer",
+		"water",
+		"light",
+		"temperature",
+		"humidity",
+		"location",
 	}
-
-	merged := mergeIntervals(converted)
-
-	return merged
-}
-
-type almanac struct {
-	seeds []int
-	maps  []almanacMap
-}
-
-func (a almanac) convert(intervals []interval) []interval {
-	intervals = mergeIntervals(intervals)
-	for _, m := range a.maps {
-		intervals = m.convert(intervals)
-	}
-	return intervals
-}
+)
 
 func almanacFromReader(r io.Reader) (*almanac, error) {
 	lines, err := helpers.LinesFromReader(r)
