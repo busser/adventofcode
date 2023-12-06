@@ -52,16 +52,68 @@ type race struct {
 }
 
 func (r race) numberOfWaysToBreakRecord() int {
-	count := 0
+	// Essentially, we are solving the following quadratic inequation:
+	//   (timeAllowed - charge) * charge > bestDistance
+	// and we want to know how many integer solutions there are for charge.
+	// We can rewrite this as:
+	//   charge^2 - timeAllowed * charge + bestDistance < 0
+	// The inequation has two roots, minCharge and maxCharge:
+	//   minCharge = (timeAllowed - sqrt(delta)) / 2
+	//   maxCharge = (timeAllowed + sqrt(delta)) / 2
+	//   delta = timeAllowed^2 - 4 * bestDistance
+	// If delta is negative, we cannot beat the race's current record.
+	delta := r.timeAllowed*r.timeAllowed - 4*r.bestDistance
+	if delta < 0 {
+		return 0
+	}
 
-	for charge := 0; charge < r.timeAllowed; charge++ {
-		speed := charge
-		if (r.timeAllowed-charge)*speed > r.bestDistance {
-			count++
+	// Computing sqrt(delta) on integers is a pain, so we are going to compute
+	// isqrt(delta) instead, where isqrt is the integer square root function:
+	//   root^2 + remainder == delta
+	root, remainder := isqrt(delta)
+
+	// We can now rewrite the inequation roots as:
+	//   minCharge = (timeAllowed - root) / 2
+	//   maxCharge = (timeAllowed + root) / 2
+	// We round minCharge up and maxCharge down.
+	minCharge := (r.timeAllowed - root + 1) / 2
+	maxCharge := (r.timeAllowed + root) / 2
+
+	// If the remainder is 0, both minCharge and maxCharge will yield a race
+	// time equal to the time allowed. This is not a valid solution: we need to
+	// do better than the current record.
+	if remainder == 0 {
+		minCharge++
+		maxCharge--
+	}
+
+	return maxCharge - minCharge + 1
+}
+
+func isqrt(n int) (int, int) {
+	var (
+		root               int
+		remainder          int
+		threshold          int
+		tentativeRemainder int
+	)
+
+	threshold = 1
+	for threshold <= n {
+		threshold *= 4
+	}
+
+	remainder, root = n, 0
+	for threshold > 1 {
+		threshold /= 4
+		tentativeRemainder = remainder - root - threshold
+		root = root / 2
+		if tentativeRemainder >= 0 {
+			remainder, root = tentativeRemainder, root+threshold
 		}
 	}
 
-	return count
+	return root, remainder
 }
 
 func racesFromReader(r io.Reader) ([]race, error) {
