@@ -165,8 +165,13 @@ func findLoop(pipeMap [][]byte) ([]position, error) {
 		return nil, fmt.Errorf("could not find starting position: %w", err)
 	}
 
+	seen := make([][]bool, len(pipeMap))
+	for i := range seen {
+		seen[i] = make([]bool, len(pipeMap[i]))
+	}
+
 	loop := []position{startingPosition}
-	seen := map[position]bool{startingPosition: true}
+	seen[startingPosition.row][startingPosition.col] = true
 
 	for {
 		neighbors := findConnectedNeighbors(pipeMap, loop[len(loop)-1])
@@ -174,7 +179,7 @@ func findLoop(pipeMap [][]byte) ([]position, error) {
 			return nil, fmt.Errorf("stumbled upon position with %d neighbors: %#v", len(neighbors), loop[len(loop)-1])
 		}
 
-		for len(neighbors) > 0 && seen[neighbors[0]] {
+		for len(neighbors) > 0 && seen[neighbors[0].row][neighbors[0].col] {
 			neighbors = neighbors[1:]
 		}
 
@@ -183,7 +188,7 @@ func findLoop(pipeMap [][]byte) ([]position, error) {
 		}
 
 		loop = append(loop, neighbors[0])
-		seen[neighbors[0]] = true
+		seen[neighbors[0].row][neighbors[0].col] = true
 	}
 
 	return loop, nil
