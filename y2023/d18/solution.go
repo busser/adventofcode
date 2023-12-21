@@ -59,13 +59,6 @@ func (v vector) plus(o vector) vector {
 	}
 }
 
-func (v vector) minus(o vector) vector {
-	return vector{
-		x: v.x - o.x,
-		y: v.y - o.y,
-	}
-}
-
 func (v vector) times(s int) vector {
 	return vector{
 		x: v.x * s,
