@@ -18,7 +18,9 @@ func PartOne(r io.Reader, w io.Writer) error {
 
 	sum := 0
 	accepted := func(p part) {
-		sum += p.totalRating()
+		for _, r := range p.ratings {
+			sum += r.start
+		}
 	}
 
 	if err := triageParts(workflows, parts, accepted); err != nil {
@@ -72,18 +74,6 @@ type workflow struct {
 	rules []rule
 }
 
-const (
-	lessThan    = '<'
-	greaterThan = '>'
-)
-
-const (
-	coolLooking = iota
-	musical
-	aeordynamic
-	shiny
-)
-
 type rule struct {
 	alwaysApplies bool
 
@@ -92,6 +82,30 @@ type rule struct {
 	value     int
 
 	next string
+}
+
+const (
+	lessThan    = '<'
+	greaterThan = '>'
+)
+
+type part struct {
+	ratings         [4]interval
+	currentWorkflow string
+	currentRule     int
+}
+
+const (
+	// The order of the attributes is important.
+	coolLooking = iota
+	musical
+	aeordynamic
+	shiny
+)
+
+type interval struct {
+	start int // inclusive
+	end   int // exclusive
 }
 
 func (r rule) process(p part) []part {
@@ -147,32 +161,6 @@ func (r rule) process(p part) []part {
 	default:
 		panic("invalid operator")
 	}
-}
-
-type interval struct {
-	start int // inclusive
-	end   int // exclusive
-}
-
-type part struct {
-	ratings         [4]interval
-	currentWorkflow string
-	currentRule     int
-}
-
-func (p part) String() string {
-	return fmt.Sprintf("{x=%d,m=%d,a=%d,s=%d}",
-		p.ratings[coolLooking], p.ratings[musical],
-		p.ratings[aeordynamic], p.ratings[shiny])
-}
-
-func (p part) totalRating() int {
-	var total int
-	for _, r := range p.ratings {
-		total += r.start
-	}
-
-	return total
 }
 
 func triageParts(workflows []workflow, parts []part, accepted func(part)) error {
