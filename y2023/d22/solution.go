@@ -110,28 +110,6 @@ func dropBricks(bricks []brick) {
 	}
 }
 
-func countDisintegratableBricks(bricks []brick) int {
-	count := 0
-
-	for i := range bricks {
-		if countHowManyFall(bricks, i) == 0 {
-			count++
-		}
-	}
-
-	return count
-}
-
-func sumFalls(bricks []brick) int {
-	sum := 0
-
-	for i := range bricks {
-		sum += countHowManyFall(bricks, i)
-	}
-
-	return sum
-}
-
 func countHowManyFall(bricks []brick, removed int) int {
 	// Disintegrate the brick.
 	withRemoved := make([]brick, len(bricks))
