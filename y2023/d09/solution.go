@@ -92,10 +92,7 @@ func sequencesFromReader(r io.Reader) ([][]int, error) {
 
 	sequences := make([][]int, len(lines))
 	for i, line := range lines {
-		sequences[i], err = helpers.IntsFromString(line, " ")
-		if err != nil {
-			return nil, fmt.Errorf("could not parse line %d: %w", i, err)
-		}
+		sequences[i] = helpers.IntsFromString(line)
 	}
 
 	return sequences, nil

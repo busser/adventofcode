@@ -229,10 +229,7 @@ func intervalsFromString(s string) ([]interval, error) {
 	intervals := make([]interval, len(rawIntervals))
 
 	for i, rawInterval := range rawIntervals {
-		numbers, err := helpers.IntsFromString(rawInterval, "-")
-		if err != nil {
-			return nil, fmt.Errorf("reading numbers: %w", err)
-		}
+		numbers := helpers.IntsFromString(rawInterval)
 		if len(numbers) != 2 {
 			return nil, errors.New("wrong format")
 		}
@@ -282,10 +279,7 @@ func nearbyTicketsFromLines(lines []string) ([]ticket, error) {
 }
 
 func ticketFromString(s string) (ticket, error) {
-	numbers, err := helpers.IntsFromString(s, ",")
-	if err != nil {
-		return nil, fmt.Errorf("parsing numbers: %w", err)
-	}
+	numbers := helpers.IntsFromString(s)
 
 	return ticket(numbers), nil
 }

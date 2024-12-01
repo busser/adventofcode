@@ -156,10 +156,7 @@ func bingoGameFromReader(r io.Reader) (bingoGame, error) {
 		return bingoGame{}, fmt.Errorf("the input should have 1 line for numbers, %d lines for each board, and a blank line before each board", bingoBoardSize)
 	}
 
-	numbers, err := helpers.IntsFromString(lines[0], ",")
-	if err != nil {
-		return bingoGame{}, fmt.Errorf("invalid first line: %w", err)
-	}
+	numbers := helpers.IntsFromString(lines[0])
 
 	var boards []*bingoBoard
 

@@ -239,11 +239,7 @@ func ruleFromString(s string) (int, rule, error) {
 
 	subRules := make([][]int, len(rawSubRules))
 	for i, rawSubRule := range rawSubRules {
-		subRule, err := helpers.IntsFromString(rawSubRule, " ")
-		if err != nil {
-			return 0, rule{}, fmt.Errorf("parsing sub-rule: %w", err)
-		}
-		subRules[i] = subRule
+		subRules[i] = helpers.IntsFromString(rawSubRule)
 	}
 
 	r := rule{

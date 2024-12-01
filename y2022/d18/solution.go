@@ -176,10 +176,7 @@ func cubesFromReader(r io.Reader) ([]vector, error) {
 
 	var cubes []vector
 	for _, l := range lines {
-		rawCube, err := helpers.IntsFromString(l, ",")
-		if err != nil {
-			return nil, err
-		}
+		rawCube := helpers.IntsFromString(l)
 		if len(rawCube) != 3 {
 			return nil, errors.New("wrong format")
 		}

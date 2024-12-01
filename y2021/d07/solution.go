@@ -103,5 +103,5 @@ func positionsFromReader(r io.Reader) ([]int, error) {
 		return nil, fmt.Errorf("expected 1 line of input, got %d", len(lines))
 	}
 
-	return helpers.IntsFromString(lines[0], ",")
+	return helpers.IntsFromString(lines[0]), nil
 }

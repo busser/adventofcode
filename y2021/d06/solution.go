@@ -85,10 +85,7 @@ func firstGenerationFromReader(r io.Reader) (generation, error) {
 		return generation{}, fmt.Errorf("expected 1 line of input, got %d", len(lines))
 	}
 
-	ages, err := helpers.IntsFromString(lines[0], ",")
-	if err != nil {
-		return generation{}, fmt.Errorf("invalid ages: %w", err)
-	}
+	ages := helpers.IntsFromString(lines[0])
 
 	var gen generation
 	for _, a := range ages {

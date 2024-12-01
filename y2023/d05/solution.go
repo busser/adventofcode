@@ -274,10 +274,7 @@ func almanacFromReader(r io.Reader) (*almanac, error) {
 		return nil, fmt.Errorf("invalid input: expected 1 line of seeds, got %d", len(chunks[0]))
 	}
 
-	seeds, err := seedsFromString(chunks[0][0])
-	if err != nil {
-		return nil, fmt.Errorf("could not parse seeds: %w", err)
-	}
+	seeds := seedsFromString(chunks[0][0])
 	if len(seeds)%2 != 0 {
 		return nil, fmt.Errorf("invalid input: expected even number of seeds, got %d", len(seeds))
 	}
@@ -303,9 +300,9 @@ func almanacFromReader(r io.Reader) (*almanac, error) {
 	}, nil
 }
 
-func seedsFromString(s string) ([]int, error) {
+func seedsFromString(s string) []int {
 	s = strings.TrimPrefix(s, "seeds: ")
-	return helpers.IntsFromString(s, " ")
+	return helpers.IntsFromString(s)
 }
 
 func almanacMapFromStrings(s []string) (almanacMap, error) {
@@ -320,10 +317,7 @@ func almanacMapFromStrings(s []string) (almanacMap, error) {
 
 	var ranges []almanacRange
 	for _, line := range s[1:] {
-		nums, err := helpers.IntsFromString(line, " ")
-		if err != nil {
-			return almanacMap{}, fmt.Errorf("could not parse map line: %w", err)
-		}
+		nums := helpers.IntsFromString(line)
 		if len(nums) != 3 {
 			return almanacMap{}, fmt.Errorf("invalid input: expected 3 numbers, got %d", len(nums))
 		}

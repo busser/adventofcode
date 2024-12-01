@@ -2,22 +2,28 @@ package helpers
 
 import (
 	"fmt"
-	"io/ioutil"
-	"log"
+	"os"
 	"testing"
+
+	"github.com/magiconair/properties/assert"
 )
 
 func ExampleIntsFromString() {
-	str := "1 23 4 567 8 90"
-	sep := " "
-
-	ints, err := IntsFromString(str, sep)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(ints)
-	// Output: [1 23 4 567 8 90]
+	fmt.Println(IntsFromString("1 23 4 567 8 90"))
+	fmt.Println(IntsFromString("1,23,4,567,8,90"))
+	fmt.Println(IntsFromString("1 23,4,   567+8//90"))
+	fmt.Println(IntsFromString("1234567890"))
+	fmt.Println(IntsFromString("hello world"))
+	fmt.Println(IntsFromString("-1 23 -4 567 -890"))
+	fmt.Println(IntsFromString("-1 23-4 567-890"))
+	// Output:
+	// [1 23 4 567 8 90]
+	// [1 23 4 567 8 90]
+	// [1 23 4 567 8 90]
+	// [1234567890]
+	// []
+	// [-1 23 -4 567 -890]
+	// [-1 23 4 567 890]
 }
 
 func BenchmarkIntsFromString(b *testing.B) {
@@ -53,7 +59,7 @@ func BenchmarkIntsFromString(b *testing.B) {
 
 	for _, bench := range benchmarks {
 		b.Run(bench.name, func(b *testing.B) {
-			bytes, err := ioutil.ReadFile(bench.dataFile)
+			bytes, err := os.ReadFile(bench.dataFile)
 			if err != nil {
 				b.Fatalf("could not read test data file: %v", err)
 			}
@@ -63,8 +69,51 @@ func BenchmarkIntsFromString(b *testing.B) {
 			b.ResetTimer()
 
 			for n := 0; n < b.N; n++ {
-				_, _ = IntsFromString(str, " ")
+				_ = IntsFromString(str)
 			}
+		})
+	}
+}
+
+func TestSplitStringIntoIntStrings(t *testing.T) {
+	testCases := []struct {
+		str  string
+		want []string
+	}{
+		{
+			str:  "1 23 4 567 8 90",
+			want: []string{"1", "23", "4", "567", "8", "90"},
+		},
+		{
+			str:  "1,23,4,567,8,90",
+			want: []string{"1", "23", "4", "567", "8", "90"},
+		},
+		{
+			str:  "1 23,4,   567+8//90",
+			want: []string{"1", "23", "4", "567", "8", "90"},
+		},
+		{
+			str:  "1234567890",
+			want: []string{"1234567890"},
+		},
+		{
+			str:  "hello world",
+			want: nil,
+		},
+		{
+			str:  "-1 23 -4 567 -890",
+			want: []string{"-1", "23", "-4", "567", "-890"},
+		},
+		{
+			str:  "-1 23-4 567-890",
+			want: []string{"-1", "23", "4", "567", "890"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.str, func(t *testing.T) {
+			got := splitStringIntoIntStrings(tc.str)
+			assert.Equal(t, got, tc.want)
 		})
 	}
 }

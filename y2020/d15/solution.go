@@ -97,10 +97,7 @@ func startingNumbersFromReader(r io.Reader) ([]int, error) {
 		return nil, errors.New("wrong format")
 	}
 
-	numbers, err := helpers.IntsFromString(lines[0], ",")
-	if err != nil {
-		return nil, fmt.Errorf("parsing numbers: %w", err)
-	}
+	numbers := helpers.IntsFromString(lines[0])
 
 	return numbers, nil
 }

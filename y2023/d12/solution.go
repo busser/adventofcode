@@ -223,10 +223,7 @@ func conditionRecordFromString(s string) (conditionRecord, error) {
 		return conditionRecord{}, fmt.Errorf("could not parse row: %w", err)
 	}
 
-	groups, err := helpers.IntsFromString(parts[1], ",")
-	if err != nil {
-		return conditionRecord{}, fmt.Errorf("could not parse groups: %w", err)
-	}
+	groups := helpers.IntsFromString(parts[1])
 
 	return conditionRecord{
 		row:    row,
