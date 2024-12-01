@@ -47,7 +47,7 @@ func splitStringIntoIntStrings(str string) []string {
 
 		if len(wordBuf) > 0 {
 			words = append(words, string(wordBuf))
-			wordBuf = wordBuf[:0] // TODO: bench vs setting to nil
+			wordBuf = wordBuf[:0] // reuse underlying array
 		}
 	}
 
