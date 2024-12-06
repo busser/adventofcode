@@ -107,15 +107,6 @@ func (rs ruleSet) sort(pages []int) {
 	}
 }
 
-func pairRespectsRules(p1, p2 int, rules []orderingRule) bool {
-	for _, rule := range rules {
-		if rule.before == p2 && rule.after == p1 {
-			return false
-		}
-	}
-	return true
-}
-
 func orderingRuleFromString(s string) (orderingRule, error) {
 	ints := helpers.IntsFromString(s)
 	if len(ints) != 2 {
