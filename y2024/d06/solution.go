@@ -161,12 +161,7 @@ func (v vector) rotatedRight() vector {
 	}
 }
 
-var (
-	up    = vector{-1, 0}
-	down  = vector{1, 0}
-	left  = vector{0, -1}
-	right = vector{0, 1}
-)
+var up = vector{-1, 0}
 
 const (
 	empty            = '.'
