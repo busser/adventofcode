@@ -109,13 +109,6 @@ func (v vector) minus(w vector) vector {
 	}
 }
 
-func (v vector) times(n int) vector {
-	return vector{
-		row: v.row * n,
-		col: v.col * n,
-	}
-}
-
 func cityMapFromReader(r io.Reader) (cityMap, error) {
 	data, err := io.ReadAll(r)
 	if err != nil {
