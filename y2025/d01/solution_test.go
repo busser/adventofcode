@@ -31,7 +31,7 @@ func ExamplePartTwo() {
 	if err := PartTwo(file, os.Stdout); err != nil {
 		log.Fatalf("could not solve: %v", err)
 	}
-	// Output: 👉 Write the answer here 👈
+	// Output: 6860
 }
 
 func Benchmark(b *testing.B) {
